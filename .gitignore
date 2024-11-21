@@ -3,6 +3,7 @@
 
 # compiled files 
 obj-x86_64-linux-gnu/
+*.axf
 
 # Prerequisites
 *.d
