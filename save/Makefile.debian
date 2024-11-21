@@ -1,0 +1,19 @@
+MCU = atmega32
+F_CPU = 1000000
+
+AVR_DEBUG_FLAG = -gdwarf-2
+
+BINS = puls8
+AVR_BINS = atmega32_puls8.axf
+
+all: $(BINS) $(AVR_BINS)
+
+OBJS_puls8 = puls8.o
+OBJS_atmega32_puls8 = atmega32_puls8.avro
+
+OBJS = $(OBJS_puls8) $(OBJS_atmega32_puls8) *.vcd
+
+puls8: $(OBJS_puls8)
+atmega32_puls8.axf: $(OBJS_atmega32_puls8)
+
+include ../makefile.common

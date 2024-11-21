@@ -1,0 +1,45 @@
+$date Sun Nov  3 20:53:03 2024
+$end
+$version Simavr unknown $end
+$timescale 10ns $end
+$scope module logic $end
+$var wire 1 ! OUTPUT $end
+$upscope $end
+$enddefinitions $end
+$dumpvars
+z!
+$end
+#4000
+1!
+#58900
+0!
+#110100
+1!
+#161300
+0!
+#212500
+1!
+#263700
+0!
+#314900
+1!
+#366100
+0!
+#417300
+1!
+#468500
+0!
+#519700
+1!
+#570900
+0!
+#622100
+1!
+#673300
+0!
+#724500
+1!
+#775700
+0!
+#826900
+1!
