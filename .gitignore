@@ -1,3 +1,6 @@
+# vcd files
+*.vcd
+
 # Backup Files
 *~
 

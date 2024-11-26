@@ -27,11 +27,20 @@ static int uart_putchar(char c, FILE *stream) {
 }
 static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL,
                                          _FDEV_SETUP_WRITE);
+int get_my_idx() {
+  uint8_t idx;
+  //printf("PINB %d\n",PINB);
+  //PORTB |= 3;
+  //printf("PINB %d\n",PINB);
+  idx = PINB;
+  return(idx);
+}
 
 int main()
 {
   stdout = &mystdout;
-  printf("Hallo\n");
+  uint8_t avrIdx = get_my_idx();
+  printf("%d: Hallo\n",avrIdx);
   PORTD=0;
   DDRD=0;
   OCR0=64-1; //sollte 64*8 = 512us
@@ -52,13 +61,13 @@ int main()
   {
     sleep_mode();
     DDRD=1<<2;
-    printf("PIND: %d\n", PIND);
+    printf("%d: PIND: %d\n",avrIdx, PIND);
     sleep_mode();
     DDRD=0;
-    printf("PIND: %d\n", PIND);
+    printf("%d: PIND: %d\n",avrIdx, PIND);
   }
 
-  printf("cnt_int: %d\n", cnt_int);
+  printf("%d: cnt_int: %d\n",avrIdx, cnt_int);
 
   cli();
 	sleep_mode();
