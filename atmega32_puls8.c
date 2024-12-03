@@ -3,6 +3,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
+#include <avr/eeprom.h>
 #include <stdio.h>
 
 #include <avr_mcu_section.h>
@@ -27,19 +28,12 @@ static int uart_putchar(char c, FILE *stream) {
 }
 static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL,
                                          _FDEV_SETUP_WRITE);
-int get_my_idx() {
-  uint8_t idx;
-  //printf("PINB %d\n",PINB);
-  //PORTB |= 3;
-  //printf("PINB %d\n",PINB);
-  idx = PINB;
-  return(idx);
-}
 
 int main()
 {
   stdout = &mystdout;
-  uint8_t avrIdx = get_my_idx();
+  uint8_t avrIdx;
+  _EEGET(avrIdx,0);
   printf("%d: Hallo\n",avrIdx);
   PORTD=0;
   DDRD=0;

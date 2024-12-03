@@ -13,8 +13,11 @@
 #include "sim_core_decl.h"
 
 #include "avr_ioport.h"
+#include "avr_eeprom.h"
 
 static avr_t *avrs[] = {NULL,NULL};
+#define AVRS_LEN sizeof(avrs) / sizeof(avr_t*)
+
 //static avr_t      * avr0 = NULL, * avr1 = NULL;
 
 static void
@@ -29,31 +32,40 @@ sig_int(
 	exit(0);
 }
 
-static uint8_t pullup_mask = (1<<2)|(1<<0);
-
 static void d_out_notify(avr_irq_t *irq, uint32_t value, void *param)
 {
-  int avrIdx = *((int*)param);
+  uint8_t avrIdx = *((uint8_t *) param);
   avr_t *avr = avrs[avrIdx];
-  uint8_t port,ddr,pin,mask;
   avr_ioport_state_t state;
+  
   if (avr_ioctl(avr, AVR_IOCTL_IOPORT_GETSTATE('D'), &state) == 0)
   {
-    if (irq->irq == IOPORT_IRQ_DIRECTION_ALL) {
-        printf("avr%d: DDR Register changed %02x\n",avrIdx,value);
-        ddr = value;
-        port = state.port;
-    } else {
-        printf("avr%d: Port Register changed %02x\n",avrIdx,value);
-        ddr = state.ddr;
-        port = value;
-    }
-    //printf("PORTB %02x DDR %02x PIN %02x\n",state.port, state.ddr, state.pin);
-    pin = (~ddr)|port;
-    mask = (pin ^ state.pin) & pullup_mask;
-	  for (uint8_t i = 0; i < 8; i++) {
-		  if (mask & (1 << i)) {
-			  avr_raise_irq(avr_io_getirq(avr, AVR_IOCTL_IOPORT_GETIRQ('D'), i), pin & (1 << i));
+    uint8_t oddr  = value;
+    uint8_t oport = state.port;
+    if ((oddr ^ state.ddr) & (1<<2)) { //betrifft PIND2
+        printf("avr%d: DDR Bit for PIND2 changed to %s\n", avrIdx, (value & (1<<2))?"ACTIV":"passiv");
+        uint8_t ddr, port, pin = 1<<2;
+        for(uint8_t i = 0; i < AVRS_LEN; i++) {
+          if(i == avrIdx) {
+            ddr  = oddr;
+            port = oport;
+          }
+          else {
+            if (avr_ioctl(avrs[i], AVR_IOCTL_IOPORT_GETSTATE('D'), &state) == 0) {
+              ddr = state.ddr;
+              port = state.port;
+            }
+            else {
+              break;
+            }
+          }
+          if( ddr & ~port & 1<<2 ) { //DDRbit ist 1 und PORTbit ist 0 -> Der Bus wird 0
+            pin = 0;
+            break;
+          }
+        }
+        for(uint8_t i = 0; i < AVRS_LEN; i++) {
+  			  avr_raise_irq(avr_io_getirq(avrs[i], AVR_IOCTL_IOPORT_GETIRQ('D'), 2), pin);
 		  }
 	  }
 	}
@@ -65,6 +77,7 @@ main(
 		int argc,
 		char *argv[])
 {
+	printf("len of avrs: %ld\n",AVRS_LEN);
 	elf_firmware_t f1 = {{0}}, f2 = {{0}};
 	uint32_t f_cpu = 1000000;
 	int gdb = 0;
@@ -124,6 +137,14 @@ main(
 		avrs[1]->pc = f2.flashbase;
 	}
 
+	/* Adressen ins eeprom schreiben */
+  uint8_t device_address1 = 1;
+	avr_eeprom_desc_t d1 = { .ee = &device_address1, .offset = 0, .size = 1 }; 
+  avr_ioctl(avrs[0], AVR_IOCTL_EEPROM_SET, &d1);
+  uint8_t device_address2 = 2;
+	avr_eeprom_desc_t d2 = { .ee = &device_address2, .offset = 0, .size = 1 }; 
+  avr_ioctl(avrs[1], AVR_IOCTL_EEPROM_SET, &d2);
+	
 	if (vcd_input) {
 		static avr_vcd_t input;
 
@@ -147,11 +168,11 @@ main(
 
   avr_irq_t  *base_irq;
   base_irq = avr_io_getirq(avrs[0], ioctl, 0);
-  avr_irq_register_notify(base_irq + IOPORT_IRQ_REG_PORT, d_out_notify, &avr0);
+  //avr_irq_register_notify(base_irq + IOPORT_IRQ_REG_PORT, d_out_notify, &avr0);
   avr_irq_register_notify(base_irq + IOPORT_IRQ_DIRECTION_ALL, d_out_notify, &avr0);
 
   base_irq = avr_io_getirq(avrs[1], ioctl, 0);
-  avr_irq_register_notify(base_irq + IOPORT_IRQ_REG_PORT, d_out_notify, &avr1);
+  //avr_irq_register_notify(base_irq + IOPORT_IRQ_REG_PORT, d_out_notify, &avr1);
   avr_irq_register_notify(base_irq + IOPORT_IRQ_DIRECTION_ALL, d_out_notify, &avr1);
 
 
@@ -164,13 +185,10 @@ main(
 	signal(SIGINT, sig_int);
 	signal(SIGTERM, sig_int);
 
-	/* set avr index (inverted!) on pins PORTB0 and PORTB1
-  for(uint8_t i = 0;i<2;i++) {
-	  avr_raise_irq(avr_io_getirq(avrs[i], AVR_IOCTL_IOPORT_GETIRQ('B'), 0), ~(i & (1 << 0)));
-	  avr_raise_irq(avr_io_getirq(avrs[i], AVR_IOCTL_IOPORT_GETIRQ('B'), 1), ~(i & (1 << 1)));
-	}
-	*/
-	avr_raise_irq(avr_io_getirq(avrs[1], AVR_IOCTL_IOPORT_GETIRQ('B'), 0), 1);
+  // pullup PIND2
+  avr_raise_irq(avr_io_getirq(avrs[0], AVR_IOCTL_IOPORT_GETIRQ('D'), 2), 1);
+  avr_raise_irq(avr_io_getirq(avrs[1], AVR_IOCTL_IOPORT_GETIRQ('D'), 2), 1);
+
 	{
 	  int avr0_running = 1, avr1_running = 1;
 		for (;;) {
