@@ -138,11 +138,11 @@ main(
 	}
 
 	/* Adressen ins eeprom schreiben */
-  uint8_t device_address1 = 1;
-	avr_eeprom_desc_t d1 = { .ee = &device_address1, .offset = 0, .size = 1 }; 
+  uint8_t device_address0 = 0;
+	avr_eeprom_desc_t d1 = { .ee = &device_address0, .offset = 0, .size = 1 }; 
   avr_ioctl(avrs[0], AVR_IOCTL_EEPROM_SET, &d1);
-  uint8_t device_address2 = 2;
-	avr_eeprom_desc_t d2 = { .ee = &device_address2, .offset = 0, .size = 1 }; 
+  uint8_t device_address1 = 1;
+	avr_eeprom_desc_t d2 = { .ee = &device_address1, .offset = 0, .size = 1 }; 
   avr_ioctl(avrs[1], AVR_IOCTL_EEPROM_SET, &d2);
 	
 	if (vcd_input) {
