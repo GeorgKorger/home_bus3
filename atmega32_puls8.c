@@ -37,7 +37,7 @@ void my_sleep(void) {
 void send_pulses(uint8_t ai) {
   uint8_t cnt = 4;
   TCNT0 = 0; //Zurücksetzen
-  OCR0=128-1; //sollte 128*8 = 1024us
+  OCR0=64-1; //64*8 = 512us
   // Compare Interrupt erlauben
   TIMSK |= (1<<OCIE0);
   // Timer 0 starten CTC Modus Prescaler 8
